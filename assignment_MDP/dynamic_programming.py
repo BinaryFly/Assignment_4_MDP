@@ -16,7 +16,7 @@ class Dynamic_Programming:
         self.V_s = None # will store a potential value solution table
         self.Q_sa = None # will store a potential action-value solution table
         
-    def value_iteration(self,env,gamma = 1.0, theta=0.001):
+    def value_iteration(self,env: World,gamma = 1.0, theta=0.001):
         ''' Executes value iteration on env. 
         gamma is the discount factor of the MDP
         theta is the acceptance threshold for convergence '''
@@ -24,14 +24,28 @@ class Dynamic_Programming:
         print("Starting Value Iteration (VI)")
         # initialize value table
         V_s = np.zeros(env.n_states)
-    
-        ## IMPLEMENT YOUR VALUE ITERATION ALGORITHM HERE
-        print("You still need to implement value iteration!")
-    
+
+        action_chance = 1 / len(env.actions) # 0.25 for 4 actions
+
+        delta = theta * 2   # make sure delta is more than theta the first iteration
+        while delta >= theta:
+            delta = 0
+            for state in env.states:
+                old_value = V_s[state]
+                cumulative = 0
+                for action in env.actions:
+                    new_state, return_value = env.transition_function(state, action)
+                    cumulative += action_chance * (return_value + gamma * V_s[new_state])
+                V_s[state] = cumulative
+                new_value = V_s[state]
+                delta = max([delta, float(old_value) - float(new_value)])
+                print(f"error: {delta}")
+
+        print(V_s)
         self.V_s = V_s
         return
 
-    def Q_value_iteration(self,env,gamma = 1.0, theta=0.001):
+    def Q_value_iteration(self,env: World,gamma = 1.0, theta=0.001):
         ''' Executes Q-value iteration on env. 
         gamma is the discount factor of the MDP
         theta is the acceptance threshold for convergence '''
@@ -46,7 +60,7 @@ class Dynamic_Programming:
         self.Q_sa = Q_sa
         return
                 
-    def execute_policy(self,env,table='V'):
+    def execute_policy(self,env: World,table='V'):
         ## Execute the greedy action, starting from the initial state
         env.reset_agent()
         print("Start executing. Current map:") 
@@ -57,10 +71,15 @@ class Dynamic_Programming:
             # Compute action values
             if table == 'V' and self.V_s is not None:
                 ## IMPLEMENT ACTION VALUE ESTIMATION FROM self.V_s HERE !!!
-                print("You still need to implement greedy action selection from the value table self.V_s!")
-                greedy_action = None # replace this!
-
-                
+                # print("You still need to implement greedy action selection from the value table self.V_s!")
+                greedy_action = None
+                best_value = None
+                for action in env.actions:
+                    new_state, _ = env.transition_function(current_state, action)
+                    value = self.V_s[new_state]
+                    if best_value is None or float(value) > best_value:
+                        greedy_action = action
+                        best_value = float(value)
             
             elif table == 'Q' and self.Q_sa is not None:
                 ## IMPLEMENT ACTION VALUE ESTIMATION FROM self.Q_sa here !!!
