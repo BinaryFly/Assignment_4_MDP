@@ -25,23 +25,27 @@ class Dynamic_Programming:
         # initialize value table
         V_s = np.zeros(env.n_states)
 
-        action_chance = 1 / len(env.actions) # 0.25 for 4 actions
-
         delta = theta * 2   # make sure delta is more than theta the first iteration
         while delta >= theta:
             delta = 0
             for state in env.states:
                 old_value = V_s[state]
-                cumulative = 0
+                highest = None
                 for action in env.actions:
                     new_state, return_value = env.transition_function(state, action)
-                    cumulative += action_chance * (return_value + gamma * V_s[new_state])
-                V_s[state] = cumulative
-                new_value = V_s[state]
-                delta = max([delta, float(old_value) - float(new_value)])
-                print(f"error: {delta}")
+                    calculated_value = float(return_value + gamma * V_s[new_state])  
+                    if highest is None or highest < calculated_value:
+                        highest = calculated_value
+                    # highest = calculated_value if highest is None or highest < calculated_value else highest
+                V_s[state] = highest
 
-        print(V_s)
+                # this is just to satisfy the linter
+                if highest is None:
+                    continue
+
+                delta = max([delta, float(old_value) - highest])
+            print(f"error: {delta}")
+
         self.V_s = V_s
         return
 
@@ -54,8 +58,23 @@ class Dynamic_Programming:
         # initialize state-action value table
         Q_sa = np.zeros([env.n_states,env.n_actions])
 
+        delta = theta * 2   # make sure delta is more than theta the first iteration
+        while delta >= theta:
+            delta = 0
+            for state in env.states:
+                for index, action in enumerate(env.actions):
+                    old_value = Q_sa[state][index]
+                    new_state, return_value = env.transition_function(state, action)
+
+                    # get the maximum return value for the next state after transitioning 
+                    max_next_return_value = Q_sa[new_state].max()
+                    calculated_value = float(return_value + gamma * max_next_return_value)  
+                    Q_sa[state][index] = calculated_value
+                    delta = max([delta, float(old_value) - calculated_value])
+
+            print(f"error: {delta}")
+
         ## IMPLEMENT YOUR Q-VALUE ITERATION ALGORITHM HERE
-        print("You still need to implement Q-value iteration!")
 
         self.Q_sa = Q_sa
         return
@@ -75,8 +94,11 @@ class Dynamic_Programming:
                 greedy_action = None
                 best_value = None
                 for action in env.actions:
-                    new_state, _ = env.transition_function(current_state, action)
+                    new_state, return_value = env.transition_function(current_state, action)
                     value = self.V_s[new_state]
+                    if return_value > 0: # this is the goal state
+                        greedy_action = action
+                        break
                     if best_value is None or float(value) > best_value:
                         greedy_action = action
                         best_value = float(value)
@@ -84,9 +106,19 @@ class Dynamic_Programming:
             elif table == 'Q' and self.Q_sa is not None:
                 ## IMPLEMENT ACTION VALUE ESTIMATION FROM self.Q_sa here !!!
                 
-                print("You still need to implement greedy action selection from the state-action value table self.Q_sa!")
-                greedy_action = None # replace this!
-                
+                greedy_action = None
+                best_value = self.Q_sa[current_state][0]
+                max_action_value_index = 0
+                for index, action_value in enumerate(self.Q_sa[current_state]):
+                    if env.transition_function(current_state,env.actions[index])[1] > 0:
+                        max_action_value_index = index
+                        break
+                    
+                    if action_value > best_value:
+                        max_action_value_index = index
+                        best_value = action_value
+                        
+                greedy_action = env.actions[max_action_value_index]                  
                 
             else:
                 print("No optimal value table was detected. Only manual execution possible.")
